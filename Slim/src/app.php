@@ -14,6 +14,9 @@ $app->group('/usuario', function(RouteCollectorProxy $grupo){
     $grupo->get('/', Usuario::class . ':TraerTodos');
     $grupo->get('/{id}', Usuario::class . ':TraerUnUsuario');
     $grupo->post('/', Usuario::class . ':AgregarUnUsuario');
+    $grupo->delete('/{id}', Usuario::class . ':EliminarUnUsuario');
+    $grupo->put('/{cadenaJson}', Usuario::class . ':ModificarUnUsuario');
+    
 
 });
 

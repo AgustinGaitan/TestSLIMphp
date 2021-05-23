@@ -43,7 +43,7 @@ class Usuario
 
         return $usuarios;
     }*/
-
+   
     public static function TraerTodosLosUsuarios()
     {      
         $objAccesoDatos = AccesoDatos::NuevoObjetoAcceso();
@@ -90,8 +90,10 @@ class Usuario
         return $newResponse->withHeader('Content-Type','application/json');
     }
 
-    public function AgregarUnUsuario(Request $request, Response $response, array $args)
+    public function AgregarUnUsuario(Request $request, Response $response, array $args) : Response
     {
+        $rtaJson = new stdClass();
+        $rtaJson->rta= "Error al eliminar.";
         $arrayDeParametros = $request->getParsedBody();
 
         $nombre = $arrayDeParametros['nombre'];
@@ -117,13 +119,21 @@ class Usuario
         $extension = explode(".", $nombreAnterior);
 
         $extension = array_reverse($extension);
-
+        $nombreFinal = $destino .  $nombre . "." . $extension[0];
 		$archivos['foto']->moveTo($destino .  $nombre . "." . $extension[0]);
-        $usuario->foto = $nombreAnterior;
-		$usuario->Agregar();
-        $response->getBody()->write("Usuario agregado!");
+        $usuario->foto = $nombreFinal;
+        if($usuario->Agregar())
+        {
+            $rtaJson->rta = "Exito al agregar al usuario.";
+            $newResponse = $response->withStatus(200, "OK");
+            $newResponse->getBody()->write(json_encode($rtaJson));	
 
-      	return $response;
+           
+        }
+		
+        return $newResponse->withHeader('Content-Type', 'application/json');
+
+  
     }
 
     public function Agregar()
@@ -150,7 +160,32 @@ class Usuario
  
     }
 
-   
+    public function ModificarUnUsuario(Request $request, Response $response, array $args) : Response
+    {
+        $objJson = json_decode(($args["cadenaJson"]));
+
+        $usuario = new Usuario();
+        $usuario->id = $objJson->id;
+        $usuario->nombre = $objJson->nombre;
+        $usuario->apellido = $objJson->apellido;
+        $usuario->correo = $objJson->correo;
+        $usuario->clave = $objJson->clave;
+        $usuario->id_perfil = $objJson->id_perfil;
+
+        $objDelaRespuesta = new stdclass();
+		$objDelaRespuesta->rta = "Fallo el modificar.";
+
+        if($usuario->Modificar())
+        {   
+            $objDelaRespuesta->rta = "Exito al modificar.";
+            $newResponse = $response->withStatus(200, "OK");
+            $newResponse->getBody()->write(json_encode($objDelaRespuesta));
+        }
+        
+        return $newResponse->withHeader('Content-Type', 'application/json');
+
+
+    }
 
     public function Modificar()
     {
@@ -159,12 +194,14 @@ class Usuario
        $consulta = $objAccesoDatos->RetornarConsulta("UPDATE usuarios SET correo = :correo,
                                                                            nombre = :nombre,
                                                                            clave = :clave,
+                                                                           apellido=:apellido,
                                                                            id_perfil = :id_perfil
                                                      WHERE id = :id");
                                                     
        $consulta->bindValue(":correo", $this->correo, PDO::PARAM_STR);
        $consulta->bindValue(":nombre", $this->nombre, PDO::PARAM_STR);
-       $consulta->bindValue(":id_perfil", $this->perfil, PDO::PARAM_INT);
+       $consulta->bindValue(":apellido", $this->apellido, PDO::PARAM_STR);
+       $consulta->bindValue(":id_perfil", $this->id_perfil, PDO::PARAM_INT);
        $consulta->bindValue(":clave", $this->clave, PDO::PARAM_STR);
        $consulta->bindValue(":id", $this->id, PDO::PARAM_INT);
 
@@ -186,6 +223,31 @@ class Usuario
 
            return false;
        }
+    }
+
+    public function EliminarUnUsuario(Request $request, Response $response, array $args) : Response
+    {   
+        $rtaJson = new stdClass();
+        $rtaJson->rta= "Error al eliminar.";
+
+        $id = $args['id'];
+        $id = intval($id);
+        $usuario = new Usuario();
+        $usuario = Usuario::TraerUno($id);
+        unlink($usuario->foto);
+
+		if($usuario->Eliminar($id))
+        {
+
+            $rtaJson->rta= "Exito al eliminar.";
+            
+        }
+
+        $newResponse = $response->withStatus(200, "OK");
+		$newResponse->getBody()->write(json_encode($rtaJson));	
+
+		return $newResponse->withHeader('Content-Type', 'application/json');
+        
     }
 
 
